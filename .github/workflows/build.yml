@@ -1,0 +1,111 @@
+name: Build 
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore: [ "**.md" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "**" ]
+    paths-ignore: [ "**.md" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_REPOSITORY: artifactory.csin.cz/openshift-docker-local/csas-storage-operator
+  CONFIG_REPOSITORY: https://artifactory.csin.cz/artifactory/openshift-generic-local/csas-storage-operator
+  # TODO these should be provided by runner
+  ARTIFACTORY_HOST: artifactory.csin.cz
+
+
+jobs:
+  test:
+    name: Test
+    runs-on: [ self-hosted, linux, default ]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      #- name: Test with molecule
+      #  uses: gofrolist/molecule-action@v2
+
+  build:
+    name: Build
+    runs-on: [ self-hosted, linux, default ]
+    timeout-minutes: 20
+    if: ${{ github.ref_type == 'tag' || github.ref_name == 'main' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Setup
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v1
+
+      # Credentials
+      - name: Registry login
+        run: podman login --username '${{ secrets.ARTIFACTORY_USERNAME }}' --password '${{ secrets.ARTIFACTORY_TOKEN }}' "$ARTIFACTORY_HOST"
+
+      - name: Setup netrc
+        uses: extractions/netrc@v1
+        with:
+          machine: ${{ env.ARTIFACTORY_HOST }}
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      # Version
+      - name: Get version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF#refs/*/v}"
+          else
+            VERSION="0.0.0-${GITHUB_REF_NAME//[\/]/-}.${GITHUB_SHA::8}-expire$(date -d "today + 60 minutes" "+%y%m%d%H%M")"
+          fi
+          echo "::set-output name=version::$VERSION"
+
+      # Build image
+      - name: Build Image
+        id: build
+        uses: csas-actions/podman-build@v1
+        with:
+          repository: ${{ env.IMAGE_REPOSITORY }}
+          version: ${{ steps.version.outputs.version }}
+
+      # Kustomize archive
+      - name: Package Kustomize Archive
+        id: kustomize
+        run: |
+          FILE="config-$VERSION.zip"
+          #sed -i "s@^labels:@\0\n  app.kubernetes.io/version: $VERSION@" config/default/app-version.yaml
+          pushd config/manager && kustomize edit set image controller="$IMAGE" && popd
+          pushd config && zip -r ../$FILE * && popd
+          echo "::set-output name=file::$FILE"
+        env:
+          IMAGE: ${{ steps.build.outputs.image }}
+          VERSION: ${{ steps.version.outputs.version }}
+
+      # Push image and chart
+      - name: Push Image
+        run: podman push '${{ steps.build.outputs.image }}'
+
+      - name: Push Kustomize Archive
+        id: push-kustomize
+        run: |
+          URL="$CONFIG_REPOSITORY/$ARCHIVE_FILE"
+          curl -Ssf --netrc -XPUT --upload-file "$ARCHIVE_FILE" "$URL"
+          echo    # Previous command doesn't echo trailing newline, so the following ::set-output doesn't work
+          echo "::set-output name=url::$URL"
+        env:
+          ARCHIVE_FILE: ${{ steps.kustomize.outputs.file }}
+
+      #- name: Build image
+      #  run: |
+      #    make docker-build docker-push IMG="${{ env.IMAGE_REPOSITORY }}:${{ steps.version.outputs.version }}"
+
+

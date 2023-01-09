@@ -1,0 +1,10 @@
+apiVersion: storage.csas.cz/v1
+kind: Nfs
+metadata:
+  #annotations:
+  #  ansible.sdk.operatorframework.io/verbosity: "5"
+  name: nfs-test-mount 
+  namespace: test
+spec:
+  server: ipocpbas01.vs.csin.cz
+  path: /test1

@@ -1,0 +1,1 @@
+# openshift-csas-storage-operator
