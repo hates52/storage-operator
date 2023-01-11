@@ -1,6 +1,0 @@
-apiVersion: storage.csas.cz/v1
-kind: Nfs
-metadata:
-  name: nfs-sample
-spec:
-  # TODO(user): Add fields here

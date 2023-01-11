@@ -1,7 +1,0 @@
----
-# code: language=ansible
-
-# tasks file for Nfs
-- name: Claim PersistentVolume and PersistentVolumeClaim
-  ansible.builtin.include_tasks:
-    file: claim.yml
