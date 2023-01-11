@@ -1,0 +1,45 @@
+---
+# code: language=ansible
+- name: Persistent Volume Claim
+  kubernetes.core.k8s:
+    state: "{{ state | default('present') }}"
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ ansible_operator_meta.name }}"
+        namespace: "{{ ansible_operator_meta.namespace }}"
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: "{{ size | default('10G') }}"
+        volumeName: "{{ ansible_operator_meta.namespace }}-{{ ansible_operator_meta.name }}"
+        storageClassName: csas-storage-operator
+
+- name: Persistent Volume
+  kubernetes.core.k8s:
+    state: "{{ state | default('present') }}"
+    definition:
+      apiVersion: v1
+      kind: PersistentVolume
+      metadata:
+        name: "{{ ansible_operator_meta.namespace }}-{{ ansible_operator_meta.name }}"
+      spec:
+        accessModes:
+          - ReadWriteMany
+        capacity:
+          storage: "{{ size | default('10G') }}"
+        claimRef:
+          name: "{{ ansible_operator_meta.name }}"
+          namespace: "{{ ansible_operator_meta.namespace }}"
+        mountOptions:
+          - nfsvers=4
+          - hard
+          - intr
+        nfs:
+          path: "{{ path }}"
+          server: "{{ server }}"
+        persistentVolumeReclaimPolicy: Retain
+        storageClassName: csas-storage-operator
