@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - storage.csas.cz
+  resources:
+  - nfs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - storage.csas.cz
+  resources:
+  - nfs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - storage.csas.cz
+  resources:
+  - nfs/status
+  verbs:
+  - get
+  - patch
+  - update

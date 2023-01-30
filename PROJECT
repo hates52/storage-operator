@@ -1,0 +1,19 @@
+domain: csas.cz
+layout:
+- go.kubebuilder.io/v4-alpha
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: storage-operator
+repo: github.com/hates52/storage-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: csas.cz
+  group: storage
+  kind: Nfs
+  path: github.com/hates52/storage-operator/api/v1
+  version: v1
+version: "3"
