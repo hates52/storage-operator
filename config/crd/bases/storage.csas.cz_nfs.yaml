@@ -35,10 +35,13 @@ spec:
           spec:
             description: NfsSpec defines the desired state of Nfs
             properties:
-              foo:
-                description: Foo is an example field of Nfs. Edit nfs_types.go to
-                  remove/update
+              path:
                 type: string
+              server:
+                type: string
+            required:
+            - path
+            - server
             type: object
           status:
             description: NfsStatus defines the observed state of Nfs
